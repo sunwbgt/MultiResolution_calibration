@@ -1,0 +1,9 @@
+
+*.pyc
+
+venv/
+
+
+*.xml
+
+.idea/
