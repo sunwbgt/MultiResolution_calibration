@@ -49,24 +49,42 @@ s_f = tch.ones(n_f)
 s_l = tch.zeros(n_l)
 s_e = tch.ones(n_e) * 2
 
-tch_x_s = tch.from_numpy(x_s)
-theta0 = tch.cat( (tch.squeeze(tch.log(tch.std(tch_x_s, 0))), tch.tensor(-1)[None]))
+
+yst_test = tch.log(y_s)[220:]
+xs_test = tch.from_numpy(x_s)[220:]
+yst = tch.log(y_s)[:220]
+xs = tch.from_numpy(x_s)[:220]
+
+theta0 = tch.squeeze(2+tch.log(tch.std(xs, 0)))
 theta = theta0.clone().detach()
 theta.requires_grad=True
 import GP_function_torch as gpt
 
-y_st = tch.log(y_s)
 
-optim = tch.optim.SGD([theta], lr = 1e-2, momentum=0.8, nesterov=True)
-for k in range(0,100):
-    optim.zero_grad()
-    gpt.Internal_neglogpost(theta,y_st,tch_x_s,theta0).backward()
-    optim.step()
+gpinfo = gpt.gpbuild(theta,yst,xs)
+yhat = gpt.gppred(xs_test,gpinfo)
+plt.scatter(yhat.detach().numpy(),yst_test.detach().numpy())
+plt.show()
+
+optim = tch.optim.LBFGS([theta], lr = 0.5)
+for k in range(0,10):
+    def closure():
+        loglik =gpt.Internal_neglogpost(theta, yst, xs, theta0)
+        optim.zero_grad()
+        loglik.backward()
+        return loglik
+    optim.step(closure)
 
 theta.requires_grad=False
-gpinfo = gpt.gpbuild(theta,y_st,tch_x_s)
+print(theta)
+print(theta0)
+gpinfo = gpt.gpbuild(theta,yst,xs)
 
 
-tch_x_s.requires_grad=True
-gpt.gppred(tch_x_s,gpinfo).sum().backward()
-print(tch_x_s.grad)
+xs_test.requires_grad=True
+yhat = gpt.gppred(xs_test,gpinfo)
+print(tch.mean(tch.abs(yhat-yst_test)))
+
+plt.scatter(yhat.detach().numpy(),yst_test.detach().numpy())
+plt.show()
+#print(tch_x_s.grad)

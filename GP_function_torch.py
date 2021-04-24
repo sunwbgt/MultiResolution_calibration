@@ -9,26 +9,26 @@ tch.set_default_dtype(tch.float64)
 def __covmat(x1, x2, gammav):
     """Return the covariance between x1 and x2 given parameter gammav."""
 
-    x1 = x1/tch.exp(gammav[:-1])
-    x2 = x2/tch.exp(gammav[:-1])
+    x1 = x1/tch.exp(gammav)
+    x2 = x2/tch.exp(gammav)
     V = tch.zeros([x1.size()[0], x2.size()[0]])
-    R = tch.ones((x1.size()[0], x2.size()[0]))*1/(1+tch.exp(gammav[-1]))
-    for k in range(0, gammav.shape[0]-1):
+    R = tch.ones((x1.size()[0], x2.size()[0]))*(1-(10**-6))
+    for k in range(0, gammav.shape[0]):
         S = tch.abs(x1[:, k].reshape(-1, 1) - x2[:, k])
         R *= (1 + S)
         V -= S
     R *= tch.exp(V)
-    R += tch.exp(gammav[-1])/(1+tch.exp(gammav[-1]))*(V > (-10**(-8)))
+    R += (10**-6)*(V > (-10**(-12)))
     return R
 
 def __covmat_pred(x1, x2, gammav):
     """Return the covariance between x1 and x2 given parameter gammav."""
 
-    x1 = x1/tch.exp(gammav[:-1])
-    x2 = x2/tch.exp(gammav[:-1])
+    x1 = x1/tch.exp(gammav)
+    x2 = x2/tch.exp(gammav)
     V = tch.zeros([x1.size()[0], x2.size()[0]])
-    R = tch.ones((x1.size()[0], x2.size()[0]))*1/(1+tch.exp(gammav[-1]))
-    for k in range(0, gammav.shape[0]-1):
+    R = tch.ones((x1.size()[0], x2.size()[0]))*(1-(10**-6))
+    for k in range(0, gammav.shape[0]):
         S = tch.abs(x1[:, k].reshape(-1, 1) - x2[:, k])
         R *= (1 + S)
         V -= S
@@ -41,10 +41,10 @@ def Internal_neglogpost(theta, ys, Xs,theta0):
     ys = ys - tch.mean(ys)
     Sigma_t = __covmat(Xs,Xs,theta)
     _,logdet = tch.linalg.slogdet(Sigma_t)
-    sigma2_hat = tch.sum(tch.solve(ys[:,None], Sigma_t).solution*ys[:,None],0)
+    sigma2_hat = tch.mean(tch.solve(ys[:,None], Sigma_t).solution*ys[:,None],0)
 
-    neglogpost =  10*tch.sum((theta-theta0)**2) #start out with prior #second roder
-    neglogpost = neglogpost+n/2*tch.log(sigma2_hat)+1/2*logdet#
+    neglogpost = 0.1*tch.sum((theta-theta0)**2)
+    neglogpost += n/2*np.squeeze(tch.log(sigma2_hat))+1/2*logdet#
     return neglogpost
 
 
