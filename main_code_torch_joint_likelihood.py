@@ -15,7 +15,6 @@ import GP_function_torch as gpt
 from tqdm import tqdm
 
 #%% read data
-os.chdir("E:\Research Projects\Low and High Resolution Calibration\EmuAccord")
 data_s = pd.read_csv("Accord_Simulation_Results_LL_Airbag_300_Large_Range.csv")
 data_f = pd.read_csv("Field_Test_Data_Full_Size_Sedan.csv")
 data_l = pd.read_csv("injury_function_data_chest.csv")
@@ -51,7 +50,7 @@ s_l = tch.zeros(n_l)
 s_e = tch.ones(n_e) * 2
 
 #%% train the emulator
-theta0 = tch.cat((tch.squeeze(tch.log(tch.std(x_s, 0))), tch.tensor(-1)[None]))
+theta0 = tch.squeeze(2+tch.log(tch.std(x_s, 0)))
 theta = theta0.clone().detach()
 theta.requires_grad=True
 
@@ -62,7 +61,7 @@ for _ in tqdm(range(nepochs)):
     optim.zero_grad()
     
     loss = gpt.Internal_neglogpost(theta,y_s,x_s,theta0)
-    loss.backward()
+    loss.backward(retain_graph=True)
     optim.step()
 
 theta.requires_grad=False
@@ -140,7 +139,7 @@ def log_prob_fn_joint(lambda_h, lambda_l, lambda_delta, lambda_e, theta, h_l, ze
     prior_random_effect = -tch.sum(1000 * zeta_l ** 2) - tch.sum(10 * h_l ** 2) - tch.sum(10 * h_f ** 2) - tch.sum(1000 * eta_f ** 2) - tch.sum(1000 * delta_f ** 2)
     prior = prior_parameter + prior_random_effect
     
-    return(log_prob_fn_lab(lambda_h, lambda_l, h_l, zeta_l) + log_prob_fn_field(lambda_h, lambda_delta, h_l, theta, zeta_l, h_f, eta_f, delta_f) + log_prob_fn_exp(lambda_delta, lambda_e, theta, delta_f) + prior)
+    return -(log_prob_fn_lab(lambda_h, lambda_l, h_l, zeta_l) + log_prob_fn_field(lambda_h, lambda_delta, h_l, theta, zeta_l, h_f, eta_f, delta_f) + log_prob_fn_exp(lambda_delta, lambda_e, theta, delta_f) + prior)
 
 # log-likelihood for lab data
 def log_prob_fn_lab(lambda_h, lambda_l, h_l, zeta_l):
@@ -197,3 +196,18 @@ def log_prob_fn_exp(lambda_delta, lambda_e, theta, delta_f):
     log_likelihood = -1 / 2 * tch.log(lambda_mix_inv) - (tch.mean(y_e) - eta_hat_e - delta_hat_e) ** 2 / 2 / lambda_mix_inv
     
     return(log_likelihood)
+
+lambda_h.requires_grad=True
+
+optim = tch.optim.SGD([lambda_h], lr = 0.01)
+for k in range(0,100):
+    def closure():
+        loglik =log_prob_fn_joint(lambda_h, lambda_l,
+                                  lambda_delta, lambda_e,
+                                  theta, h_l, zeta_l,
+                                  h_f, eta_f, delta_f)
+        optim.zero_grad()
+        loglik.backward(retain_graph=True)
+        return loglik
+    optim.step(closure)
+    print(lambda_h)

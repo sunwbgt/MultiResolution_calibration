@@ -56,9 +56,16 @@ def gpbuild(theta, ys, Xs):
     fitdict['pw'] = tch.solve(ys[:,None]-fitdict['mu'], Sigma_t).solution
     fitdict['sigma2_hat'] = tch.sum(fitdict['pw']*ys[:,None],0)
     fitdict['theta'] = theta
+    fitdict['Si'] = tch.linalg.inv(Sigma_t)
     fitdict['Xs'] = Xs
     return fitdict
 
 def gppred(Xn,fitdict):
     muhat = fitdict['mu'] + __covmat_pred(Xn,fitdict['Xs'],fitdict['theta']) @ fitdict['pw']
     return muhat
+
+def covpred(Xn,fitdict):
+    S1 = (10**-6) +  __covmat_pred(Xn,Xn,fitdict['theta'])
+    S2 =  __covmat_pred(Xn,fitdict['Xs'],fitdict['theta'])
+    S = S1 - S2 @ fitdict['Si'] @ S2.T
+    return fitdict['sigma2_hat']*S
