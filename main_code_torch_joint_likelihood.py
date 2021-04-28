@@ -131,7 +131,7 @@ h_l = tch.zeros(n_l)
 h_f = tch.zeros(n_f)
 
 x_f_s = tch.hstack((x_f, parameter_default.repeat(n_f, 1)))
-eta_f = gpt.gppred(x_f_s, gpinfo).T.squeeze(0)
+eta_f = gpt.gppred(x_f_s, gpinfo).T.squeeze(0).detach()
 delta_f = tch.zeros((1, n_f))
 
 # define log-likelihood functions
@@ -216,6 +216,4 @@ for k in range(nepochs):
         lambda_h.clamp_(0.001, 10000)
         
     print(lambda_h, negloglik)
-
-
 
