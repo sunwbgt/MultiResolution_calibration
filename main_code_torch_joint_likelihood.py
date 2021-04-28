@@ -50,7 +50,7 @@ s_l = tch.zeros(n_l)
 s_e = tch.ones(n_e) * 2
 
 #%% train the emulator
-theta0 = tch.squeeze(2+tch.log(tch.std(x_s, 0)))
+theta0 = tch.cat((tch.squeeze(2+tch.log(tch.std(x_s, 0))),tch.tensor(-9)[None]))
 theta = theta0.clone().detach()
 theta.requires_grad=True
 
@@ -79,9 +79,9 @@ def func_mean(age, zeta):
 # covariance function for logit of injury risk
 def corrmat_h(Xa1, Xa2, Xa3, Xb1, Xb2, Xb3):
     
-    R1 = tch.exp(-((Xa1.reshape(-1, 1) - Xb1) / 40) ** 2)
+    R1 = tch.exp(-tch.abs((Xa1.reshape(-1, 1) - Xb1) / 40) ** 1.5)
         
-    R2 = tch.exp(-((Xa2.reshape(-1, 1) - Xb2) / 0.035) ** 2)
+    R2 = tch.exp(-tch.abs((Xa2.reshape(-1, 1) - Xb2) / 0.035) ** 1.5)
         
     Xa3[Xa3 == 2] = 0
     Xb3[Xb3 == 2] = 0
@@ -91,9 +91,9 @@ def corrmat_h(Xa1, Xa2, Xa3, Xb1, Xb2, Xb3):
 
 # covariance function for discrepancy
 def corrmat_delta(Xa1, Xa2, Xa3, Xb1, Xb2, Xb3):
-    R1 = tch.exp(-((Xa1.reshape(-1, 1) - Xb1) / 0.4) ** 2)
-    R2 = tch.exp(-((Xa2.reshape(-1, 1) - Xb2) / 0.6) ** 2)
-    R3 = tch.exp(-((Xa3.reshape(-1, 1) - Xb3) / 0.6) ** 2)
+    R1 = tch.exp(-tch.abs((Xa1.reshape(-1, 1) - Xb1) / 0.4) ** 1.5)
+    R2 = tch.exp(-tch.abs((Xa2.reshape(-1, 1) - Xb2) / 0.6) ** 1.5)
+    R3 = tch.exp(-tch.abs((Xa3.reshape(-1, 1) - Xb3) / 0.6) ** 1.5)
     
     return(R1 * R2 * R3)
 
